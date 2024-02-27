@@ -1,0 +1,59 @@
+---
+#OS_MIG_LOG_DIR: /var/log/leapp#
+OS_MIG_LOG_DIR: /var/log/ripu_logs
+OS_MIG_STATUS: "{{ OS_MIG_LOG_DIR }}/osmig8status"
+PRE_MIG_SYS_INFO_TXT: "{{ OS_MIG_LOG_DIR }}/pre_mig_system_info.txt"
+PRE_MIG_SYS_INFO_JSON: "{{ OS_MIG_LOG_DIR }}/pre_mig_system_info.json"
+
+POST_MIG_SYS_INFO_TXT: "{{ OS_MIG_LOG_DIR }}/post_mig_system_info.txt"
+POST_MIG_SYS_INFO_JSON: "{{ OS_MIG_LOG_DIR }}/post_mig_system_info.json"
+
+OS_MIG_SYS_INFO_VALIDATION: "{{ OS_MIG_LOG_DIR }}/os_mig_sys_info_validation.json"
+OS_MIG_SYS_INFO_DIFFERENCE: "{{ OS_MIG_LOG_DIR }}/os_mig_sys_info_difference.json"
+
+config_backup_dir: /var/tmp/LEAPP_el7toel8/Backups
+
+config_paths_to_backup:
+  - /boot/grub2 
+  - /etc/fstab 
+  - /etc/hosts 
+
+veritas_config_paths_to_backup:
+  - /etc/vx/cbr/bk
+  - /etc/VRTSvcs/conf/config
+  - /opt/VRTSvcs/bin
+  - /etc/vx/.uuids/clusuuid
+  - /etc/sysconfig/gabtab
+  - /etc/sysconfig/vxfentab
+  - /etc/sysconfig/vxfendg
+  - /etc/sysconfig/vxfenmode
+  - /etc/sysconfig/llt
+  - /etc/sysconfig/gab
+  - /etc/sysconfig/vcs 
+  - /etc/llttab
+  - /etc/llthosts
+  
+
+unsupported_modules_to_remove:
+  - pata_acpi 
+  - floppy 
+
+target_version: 8.8 
+
+systemd_services_to_validate:
+  - rsyslog.service
+  - tuned.service
+  - syslog.service
+
+systemd_services_to_stop:
+  - rsyslog.service
+
+packges_to_remove:
+  - tmux
+
+rear_pkgs: rear, syslinux, genisoimage
+
+nfs_server: "127.0.0.1"
+nfs_dir: "backup_dir"
+
+os_path: $PATH

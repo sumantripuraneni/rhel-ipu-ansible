@@ -1,0 +1,40 @@
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "FS_CHECK: Start"
+        state: present
+        create: true
+
+    - name: Check Size of /boot
+      ansible.builtin.assert:
+        that: (ansible_mounts | selectattr('mount', 'equalto', "/boot")|list)[0].size_total > 409489920 
+        success_msg: "/boot file system total size greater than 400 MB"
+        fail_msg: "/boot file system total size less than 400 MB"
+
+    - name: Check Size of /var
+      ansible.builtin.assert:
+        that: (ansible_mounts | selectattr('mount', 'equalto', "/var")|list)[0].size_available > 2147483648 
+        success_msg: "/var file system is having available free space greater than 2.0 GB"
+        fail_msg: "/var file system is having available free space less than 2.0 GB"
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "FS_CHECK: Complete"
+        state: present
+        create: true
+
+  rescue:
+  
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "FS_CHECK: Fail"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: " Error in validation filesystem sizes of /boot, /root, /var"

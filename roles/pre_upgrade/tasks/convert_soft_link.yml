@@ -1,0 +1,70 @@
+---
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "SOFTLINK_CHANGE: Start"
+        state: present
+        create: true
+
+    - name: Find links
+      ansible.builtin.find:
+        paths: /
+        file_type: link
+      register: path_links
+
+    - name: Find target of link
+      ansible.builtin.stat:
+        path: "{{ item['path'] }}"
+      loop: "{{ path_links['files'] }}"
+      loop_control:
+        label: "{{ item['path'] }}"
+      register: link_target
+
+    - name: Remove links
+      ansible.builtin.file:
+        path: "{{ item['stat']['path'] }}"
+        state: absent
+      when:
+        - (item['stat']['lnk_target'] == item['stat']['lnk_source'] )
+        - (item['stat']['path'] is defined )
+        - (item['stat']['path'] | length > 0)
+      loop: "{{link_target ['results'] }}"
+      loop_control:
+        label: "{{ item['stat']['path'] }}"
+
+    - name: Recreate links with relative path
+      ansible.builtin.file:
+        dest: "{{ item['stat']['path'] }}"
+        src: "{{ item['stat']['lnk_source'] | regex_replace('^\\/','') }}" 
+        state: link
+        force: true
+      loop: "{{ link_target['results'] }}"
+      loop_control:
+        label: "Recreating link {{ item['stat']['lnk_source'] }} to {{ item['stat']['path'] }}" 
+      when:
+        - (item['stat']['lnk_target'] == item['stat']['lnk_source'] )
+        - (item['stat']['path'] is defined )
+        - (item['stat']['path'] | length > 0 )
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "SOFTLINK_CHANGE: Complete"
+        state: present
+        create: true
+
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "SOFTLINK_CHANGE: Fail"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "Error occured while converting softlinks"
+

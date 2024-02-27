@@ -1,0 +1,60 @@
+---
+# tasks file for post_upgrade
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "POST_UPGRADE: Start"
+        state: present
+        create: true
+
+    - name: Print message 
+      ansible.builtin.debug:
+        msg: "***  POST_UPGRADE Stage of RHEL Inplace Upgarde - Started   ***"
+
+    - name: Include task file to harden cron permission
+      ansible.builtin.include_tasks: cron_permissions_hardening.yml
+
+    - name: Enable and start systemd services
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: systemd_services.yml
+      vars:
+        v_action: "start"
+        v_list_of_services: 
+          - "autofs"
+        v_enable: true
+    
+    - name: Gather system info 
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: log_info.yml
+      vars:
+        v_analysis: 'post'
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "POST_UPGRADE: Complete"
+        state: present
+        create: true
+
+    - name: Print message 
+      ansible.builtin.debug:
+        msg: "***  POST_UPGRADE Stage of RHEL Inplace Upgarde - Completed  ***"
+
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "POST_UPGRADE: FAIL"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "An error occured while performing post upgrade tasks"
+
+

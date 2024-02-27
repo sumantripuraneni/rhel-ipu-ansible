@@ -1,0 +1,30 @@
+---
+- name: Play to upgrade a system from RHEL7 to RHEL8 
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Include pre_upgrade role
+      ansible.builtin.include_role: 
+        name: pre_upgrade
+      when: ansible_distribution_major_version | int == 7
+
+    - name: Include analysis role
+      ansible.builtin.include_role:
+        name: analysis
+      when: ansible_distribution_major_version | int == 7
+
+    - name: Include upgrade role
+      ansible.builtin.include_role:
+        name: upgrade
+      when: ansible_distribution_major_version | int == 7
+
+    - name: Include post_upgrade role
+      ansible.builtin.include_role:
+        name: post_upgrade
+      when: ansible_distribution_major_version | int == 8
+
+    - name: Include validation role
+      ansible.builtin.include_role:
+        name: validation
+      when: ansible_distribution_major_version | int == 8

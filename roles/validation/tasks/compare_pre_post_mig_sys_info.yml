@@ -1,0 +1,81 @@
+---
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "COMPARISION_OF_PRE_POST_SYS_INFO: Start"
+        state: present
+        create: true
+
+    - name: Get pre migration system  data 
+      ansible.builtin.slurp: 
+        src: "{{ PRE_MIG_SYS_INFO_JSON }}"
+      register: pre_mig_data_slurp
+
+    - name: Get post migration system data 
+      ansible.builtin.slurp: 
+        src: "{{ POST_MIG_SYS_INFO_JSON }}"
+      register: post_mig_data_slurp
+
+    - name: Read pre and post mig json 
+      ansible.builtin.set_fact: 
+        pre_mig_data: "{{ pre_mig_data_slurp['content'] | b64decode }}"
+        post_mig_data: "{{ post_mig_data_slurp['content'] | b64decode }}"
+
+    - name: Set fact for migration validation differences
+      ansible.builtin.set_fact:
+        mig_validation: "{{ mig_validation | default({}) | combine({ item  : 'OK' if (pre_mig_data[item] == post_mig_data[item]) else 'NOT-OK'}) }}"
+      loop: "{{ pre_mig_data.keys()| sort }}"
+      when: item not in ["GATHERED_AT","OS_KERNEL_VERSION","OS_VERSION" ]
+
+    - name: Print migration validation results
+      ansible.builtin.debug: 
+        msg: "{{ mig_validation }}"
+
+    - name: Create migration validation file 
+      ansible.builtin.copy:
+        content: "{{ mig_validation | to_nice_json }}"
+        dest:  "{{ OS_MIG_SYS_INFO_VALIDATION }}"
+
+    - name: Set fact for migration differences
+      ansible.builtin.set_fact:
+        mig_differences: "{{ mig_differences | default({}) | combine({ item.key: {'PRE_MIG_DATA': pre_mig_data[item.key], 'POST_MIG_DATA': post_mig_data[item.key]  }} ) }}"
+      loop: "{{ mig_validation | dict2items }}"
+      when: item.value == 'NOT-OK'
+
+    - block:
+        - name: Print migration validation results
+          ansible.builtin.debug: 
+            msg: "{{ mig_differences }}"
+
+        - name: Create migration differences file 
+          ansible.builtin.copy:
+            content: "{{ mig_differences | to_nice_json }}"
+            dest: "{{ OS_MIG_SYS_INFO_DIFFERENCE }}"
+      when: mig_differences is defined 
+
+    - name: Print no difference message
+      ansible.builtin.debug:
+        msg: "No diferences found in pre and post system information"
+      when: mig_differences is not defined 
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "COMPARISION_OF_PRE_POST_SYS_INFO: Complete"
+        state: present
+        create: true
+
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "COMPARISION_OF_PRE_POST_SYS_INFO: Fail"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "An error occured while comparing pre and post migration system information"

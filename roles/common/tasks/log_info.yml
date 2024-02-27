@@ -1,0 +1,69 @@
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PRE_MIG_SYS_INFO: Start"
+        state: present
+        create: true
+
+    - name: Get systemd services info 
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+      register: systemd_services_out 
+      loop: "{{ systemd_services_to_validate }}"
+
+    - name: Get system vendor information 
+      ansible.builtin.slurp:
+        src: /sys/devices/virtual/dmi/id/sys_vendor
+      register: system_vendor
+
+    - name: Set fact for system vendor 
+      ansible.builtin.set_fact:
+        system_vendor: "{{ system_vendor['content'] | b64decode | trim }}"
+
+    - name: Set fact for systemd services and status
+      ansible.builtin.set_fact:
+        systemd_services_info: "{{ systemd_services_info | default([]) + [ { item.name: item.status.SubState } ] }}"
+      loop: "{{ systemd_services_out.results }}"
+
+    - name: Gather mounts information 
+      ansible.builtin.setup:
+        gather_subset:
+          - mounts
+    
+    - name: Set fact for systemd services and status
+      ansible.builtin.set_fact:
+        mounts_info: "{{ mounts_info | default([]) + [ { 'Filesystem': item.device, 'Mount': item.mount, 'FSType': item.fstype, 'TotalSize': item.size_total, 'Availablesize': item.size_available } ] }}"
+      loop: "{{ ansible_mounts }}"
+
+    - name: Template out the system information 
+      ansible.builtin.template:
+        src: log_info.j2
+        dest: "{{ PRE_MIG_SYS_INFO_TXT if v_analysis | upper == 'PRE' else POST_MIG_SYS_INFO_TXT }}"
+
+
+    - name: Template out the system information 
+      ansible.builtin.template:
+        src: log_info_json.j2
+        dest: "{{ PRE_MIG_SYS_INFO_JSON if v_analysis | upper == 'PRE' else POST_MIG_SYS_INFO_JSON }}"
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PRE_MIG_SYS_INFO: Complete"
+        state: present
+        create: true
+
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PRE_MIG_SYS_INFO: Fail"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "Error occured while gathring system information"

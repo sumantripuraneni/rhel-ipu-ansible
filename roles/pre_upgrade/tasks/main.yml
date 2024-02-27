@@ -1,0 +1,78 @@
+---
+# tasks file for pre_analysis
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PRE_UPGRADE: Start"
+        state: present
+        create: true
+    
+    - name: Gather facts 
+      ansible.builtin.gather_facts:
+    
+    - name: Print message 
+      ansible.builtin.debug:
+        msg: "***   PRE_UPGRADE Stage of RHEL Inplace Upgarde - Started   ***"
+
+    - name: Create log dir - {{ OS_MIG_LOG_DIR }}
+      ansible.builtin.file:
+        path: "{{ OS_MIG_LOG_DIR }}"
+        state: directory
+        mode: '0755'
+
+    - name: Include task file to perform configuration backups
+      ansible.builtin.include_tasks: configuration_backup.yml
+
+    - name: Gather system info 
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: log_info.yml
+      vars:
+        v_analysis: 'pre'
+
+    - name: Check mandatory filesystem size check  
+      ansible.builtin.include_tasks: fs_size_check.yml
+    
+    #- name: Take backup of system using ReaR 
+    #  ansible.builtin.include_tasks: rear_backup.yml  
+    #
+    - name: Stop Systemd Services 
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: systemd_services.yml
+      vars:
+        v_action: "stop"
+        v_list_of_services: "{{ systemd_services_to_stop | list }}"
+    
+    - name: Remove packages 
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: packages_to_remove.yml
+      vars:
+        v_action: "remove"
+        v_list_of_packages: "{{ packges_to_remove | list }}"
+    
+    - name: Convert Softlink
+      ansible.builtin.include_tasks: convert_soft_link.yml
+    
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PRE_ANALYSIS: Complete"
+        state: present
+        create: true
+
+  rescue:
+    
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PRE_UPGRADE: Fail"
+        state: present
+        create: true
+
+    - name: Print message 
+      ansible.builtin.debug:
+        msg: "An error occured in pre_upgrade phase"

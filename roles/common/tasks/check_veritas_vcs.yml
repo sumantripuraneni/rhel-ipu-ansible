@@ -1,0 +1,62 @@
+---
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CHECK_VERITAS_VCS: Start"
+        state: present
+        create: true
+
+    - name: Initialze veritas vcs variable
+      ansible.builtin.set_fact:
+        veritas_vcs_running: false
+
+    - name: Identify if veritas is available on this host 
+      ansible.builtin.yum:
+        name: VRTSvcs
+        state: present 
+      check_mode: true
+      register: vrts_out
+      ignore_errors: true
+
+    - name: Check Veritas vcs service 
+      ansible.builtin.service:
+        name: vcs.service
+        state: started
+      check_mode: true
+      ignore_errors: true
+      register: veritas_vcs_service_out
+
+    - name: Set fact for veritas vcs 
+      ansible.builtin.set_fact:
+        veritas_vcs_running: true
+      when:
+        - vrts_out.rc | int == 0 
+        - vrts_out.changed | bool = false
+        - veritas_vcs_service_out.failed | bool == false
+        - veritas_vcs_service_out.changed | bool == false
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "{{ 'Veritas is running on host' if veritas_vcs_running else 'Veritas is not running on this host' }}"
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CHECK_VERITAS_VCS: Complete"
+        state: present
+        create: true
+
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CHECK_VERITAS_VCS: Fail"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "An error occured while checking for veritas vcs"

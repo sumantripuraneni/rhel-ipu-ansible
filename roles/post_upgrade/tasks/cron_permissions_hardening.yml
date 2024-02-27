@@ -1,0 +1,60 @@
+---
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CRON_PERMISSIONS_HARDENING: Start"
+        state: present
+        create: true
+
+    - name: Create cronieperm file 
+      ansible.builtin.copy:
+        content: |
+          #!/bin/bash
+
+          # Set permissions of /etc/crontab
+          chmod 600 /etc/crontab
+          
+          # Set permissions of /etc/cron.d
+          chmod 700 /etc/cron.d
+          
+          # Set permissions of /etc/cron.hourly, /etc/cron.daily, /etc/cron.weekly, and /etc/cron.monthly
+          chmod 700 /etc/cron.hourly
+          chmod 700 /etc/cron.daily
+          chmod 700 /etc/cron.weekly
+          chmod 700 /etc/cron.monthly
+        dest: /usr/local/bin/cronieperm
+        mode: '0755'
+
+    - name: Install python3-dnf-plugin-post-transaction-actions package 
+      ansible.builtin.yum:
+        name: python3-dnf-plugin-post-transaction-actions
+        state: latest
+
+    - name:
+      ansible.builtin.copy:
+        content: | 
+          cronie:in:/usr/local/bin/cronieperm ;echo “Cronie permissions hardening”
+        dest: /etc/dnf/plugins/post-transaction-actions.d/cronie.action
+
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CRON_PERMISSIONS_HARDENING: Complete"
+        state: present
+        create: true
+
+  rescue:
+  
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CRON_PERMISSIONS_HARDENING: Fail"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "An error occurred while changing cron permissions"

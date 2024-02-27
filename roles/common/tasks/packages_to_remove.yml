@@ -1,0 +1,53 @@
+---
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PACKAGES_{{ v_action | upper }}: Start"
+        state: present
+        create: true
+
+    - name: Print action requested message
+      ansible.builtin.debug:
+        msg: "Action requested - {{ v_action }}"
+
+    - name: Print list of packages
+      ansible.builtin.debug:
+        msg: "List of packages - {{ v_list_of_packages }}"
+
+    - name: "{{ v_action | capitalize }} packages"
+      ansible.builtin.yum:
+        name: "{{ v_list_of_packages }}"
+        state: "{{'absent' if v_action == 'remove' else 'present' }}"
+      register: packages_out
+      retries: 10
+      delay: 10
+      until: packages_out is not failed
+      ignore_errors: true
+
+    - name: Print packages_out
+      ansible.builtin.debug:
+        msg: "{{packages_out }}"
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PACKAGES_{{ v_action | upper }}: Complete"
+        state: present
+        create: true
+
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "PACKAGES_{{ v_action | upper }}: Fail"
+        state: present
+        create: true
+
+    - name: Fail if any error with packages
+      ansible.builtin.fail:
+        msg: "An issue with packages while action {{ v_action }}"
+      when:
+        - packages_out is failed

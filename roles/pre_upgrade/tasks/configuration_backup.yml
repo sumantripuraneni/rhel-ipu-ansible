@@ -1,0 +1,58 @@
+---
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CONFIGURATION_BACKUP: Start"
+        state: present
+        create: true
+
+    - name: Ensure directory exists 
+      ansible.builtin.file:
+        path: "{{ config_backup_dir }}"
+        state: directory
+        recurse: true
+        mode: '0755'
+
+    - name: Set fact for veritas vcs 
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: check_veritas_vcs.yml
+
+    - name: Take OS configuration backup
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ config_backup_dir }}"
+        remote_src: true
+      register: config_bkp 
+      loop: "{{ config_paths_to_backup }}"
+      
+    - name: Take veritas vcs configuration backup 
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ config_backup_dir }}"
+        remote_src: true
+      register: config_bkp 
+      loop: "{{ veritas_config_paths_to_backup }}"
+      when: veritas_vcs_running
+      
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CONFIGURATION_BACKUP: Complete"
+        state: present
+        create: true
+
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "CONFIGURATION_BACKUP: Fail"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "An error occurred while configuration backup"

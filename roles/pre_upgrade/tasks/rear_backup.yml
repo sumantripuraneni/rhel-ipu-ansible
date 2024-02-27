@@ -1,0 +1,27 @@
+---
+# tasks file 
+- block:
+    #Task to install  ReaR packages
+    - name: Install ReaR and realted packages
+      ansible.builtin.yum:
+        name: "{{ rear_pkgs }}"
+        state: present
+
+    #Create ReaR config file
+    - name: ReaR config file
+      ansible.builtin.template:
+        src: local.conf.j2
+        dest: /etc/rear/local.conf
+        owner: root
+        group: root
+        mode: '0600'
+        backup: yes
+
+    #Invoke rear command to take backup
+    - name: Run backup 
+      ansible.builtin.shell: rear -d -v mkbackup
+      
+  rescue:
+    - name: Print when error
+      ansible.builtin.debug:
+        msg: "An error occured with ReaR backup, please check ReaR log files"

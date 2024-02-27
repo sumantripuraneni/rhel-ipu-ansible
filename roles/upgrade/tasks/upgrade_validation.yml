@@ -1,0 +1,54 @@
+---
+
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "UPGRADE_VALIDATION: Start"
+        state: present
+        create: true
+
+    - name: upgrade-validation | Collect updated facts
+      ansible.builtin.setup:
+    
+    - name: upgrade-validation | Determine rhel_dest_major_version
+      ansible.builtin.set_fact:
+        rhel_dest_major_version: "{{ ((ansible_facts.ansible_local.pre_ripu.distribution_major_version | int) + 1) | string }}"
+    
+    - name: upgrade-validation | Validate current OS major version
+      ansible.builtin.assert:
+        that: ansible_distribution_major_version == rhel_dest_major_version
+        fail_msg: Expected leapp destination OS major version {{ rhel_dest_major_version }} but OS major version is {{ ansible_distribution_major_version }}.
+        success_msg: Current OS version is {{ ansible_distribution_version }}.
+    
+    - name: upgrade-validation | Validate running kernel matches OS version
+      ansible.builtin.assert:
+        that: "'el' ~ rhel_dest_major_version in ansible_kernel"
+        fail_msg: Kernel version {{ ansible_kernel }} does not match expected OS major version el{{ rhel_dest_major_version }}.
+        success_msg: Current kernel version is {{ ansible_kernel }}.
+    
+    - name: upgrade-validation | Include leapp post upgrade validation
+      ansible.builtin.include_tasks: leapp_upgrade_validation.yml
+      when: ansible_facts.ansible_local.pre_ripu.distribution_major_version|int >= 7
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "UPGRADE_VALIDATION: Complete"
+        state: present
+        create: true
+
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "UPGRADE_VALIDATION: Fail"
+        state: present
+        create: true
+
+    - name: Print message
+      ansible.builtin.debug:
+        msg: "An error occurred while validating leapp upgrade"
+...

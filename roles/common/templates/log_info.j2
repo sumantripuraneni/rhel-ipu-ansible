@@ -1,0 +1,11 @@
+GATHERED_AT: {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+HOSTNAME: "{{ ansible_fqdn }}"
+IPADDRESS: "{{ ansible_default_ipv4.address }}"
+OS_VENDOR: "{{ ansible_distribution }}"
+OS_VERSION: "{{ ansible_distribution_version }}"
+OS_KERNEL_VERSION: "{{ ansible_kernel }}"
+OS_RELEASE: "{{ ansible_distribution_release }}"
+SYSTEM_VENDOR: "{{ system_vendor | default('Unknown') }}"
+NETWORK_INTERFACES: "{{ ansible_facts.interfaces }}"
+SYSTEMD_SERVICES: "{{ systemd_services_info | default([]) | to_nice_json }}"
+FS_MOUNTS: "{{ mounts_info | default([]) | to_nice_json }}"

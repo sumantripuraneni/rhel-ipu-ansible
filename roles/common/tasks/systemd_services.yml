@@ -1,0 +1,73 @@
+---
+- block:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "SERVICES_{{ v_action | upper }}: Start"
+        state: present
+        create: true
+
+    - name: Print action requested message
+      ansible.builtin.debug:
+        msg: "Action requested - {{ v_action }}"
+
+    - name: Print list of services
+      ansible.builtin.debug:
+        msg: "List of services - {{ v_list_of_services }}"
+
+    - name: "{{ v_action | capitalize }} services without enable flag"
+      ansible.builtin.service:
+        name: "{{item }}"
+        state: "{{'stopped' if v_action == 'stop' else 'started' }}"
+      register: services_out
+      retries: 10
+      delay: 10
+      until: services_out is not failed
+      ignore_errors: true
+      loop: "{{ v_list_of_services }}"
+      loop_control:
+        label: "{{ v_action | capitalize }} service {{ item }}"
+      when:
+        - v_enable is not defined 
+
+    - name: "{{ v_action | capitalize }} services with enable flag"
+      ansible.builtin.service:
+        name: "{{item }}"
+        state: "{{'stopped' if v_action == 'stop' else 'started' }}"
+        enabled: "{{ v_enable }}"
+      register: services_out
+      retries: 10
+      delay: 10
+      until: services_out is not failed
+      ignore_errors: true
+      loop: "{{ v_list_of_services }}"
+      loop_control:
+        label: "{{ v_action | capitalize }} service {{ item }}"
+      when: 
+        - v_enable is defined 
+
+    - name: Print services_out
+      ansible.builtin.debug:
+        msg: "{{services_out }}"
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "SERVICES_{{ v_action | upper }}: Complete"
+        state: present
+        create: true
+  rescue:
+
+    - name: Add info to OS_MIG_STATUS
+      ansible.builtin.lineinfile: 
+        path: "{{ OS_MIG_STATUS }}"
+        line: "SERVICES_{{ v_action | upper }}: Fail"
+        state: present
+        create: true
+
+    - name: Fail if any error with services
+      ansible.builtin.fail:
+        msg: "An issue with services while action {{ v_action }}"
+      when:
+        - services_out is failed

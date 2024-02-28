@@ -45,17 +45,37 @@
       vars:
         v_action: "stop"
         v_list_of_services: "{{ systemd_services_to_stop | list }}"
+      when:
+        - systemd_services_to_stop is defined
+        - systemd_services_to_stop | length > 0
     
     - name: Remove packages 
       ansible.builtin.include_role:
         name: common
-        tasks_from: packages_to_remove.yml
+        tasks_from: manage_packages.yml
       vars:
         v_action: "remove"
-        v_list_of_packages: "{{ packges_to_remove | list }}"
+        v_list_of_packages: "{{ packages_to_remove | list }}"
+      when: 
+        - packages_to_remove is defined 
+        - packages_to_remove | length > 0 
     
+    - name: Removing unsupported modules
+      community.general.modprobe: 
+        name: "{{ item }}"
+        state: absent
+      loop: "{{ unsupported_modules_to_remove }}"
+
     - name: Convert Softlink
       ansible.builtin.include_tasks: convert_soft_link.yml
+
+    - name: Allow root login 
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: "^#PermitRootLogin yes"
+        line: "PermitRootLogin yes"
+        state: present
+      when: permit_root_login_change | bool == true
     
     - name: Add info to OS_MIG_STATUS
       ansible.builtin.lineinfile: 

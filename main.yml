@@ -7,24 +7,50 @@
     - name: Include pre_upgrade role
       ansible.builtin.include_role: 
         name: pre_upgrade
+        apply:
+          tags:
+            - pre_upgrade
       when: ansible_distribution_major_version | int == 7
+      tags: 
+        - pre_upgrade
+
 
     - name: Include analysis role
       ansible.builtin.include_role:
         name: analysis
+        apply:
+          tags:
+            - analysis
       when: ansible_distribution_major_version | int == 7
+      tags:
+        - analysis
 
     - name: Include upgrade role
       ansible.builtin.include_role:
         name: upgrade
+        apply:
+          tags:
+            - upgrade
       when: ansible_distribution_major_version | int == 7
+      tags:
+        - upgrade
 
     - name: Include post_upgrade role
       ansible.builtin.include_role:
         name: post_upgrade
+        apply:
+          tags:
+            - post_upgrade
       when: ansible_distribution_major_version | int == 8
+      tags:
+        - post_upgrade
 
     - name: Include validation role
       ansible.builtin.include_role:
         name: validation
+        apply:
+          tags:
+            - validation
       when: ansible_distribution_major_version | int == 8
+      tags:
+        - validation 

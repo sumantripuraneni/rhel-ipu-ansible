@@ -3,9 +3,14 @@
     - name: Add info to OS_MIG_STATUS
       ansible.builtin.lineinfile: 
         path: "{{ OS_MIG_STATUS }}"
-        line: "PRE_MIG_SYS_INFO: Start"
+        line: "GATHER_SYS_INFO: Start"
         state: present
         create: true
+
+    - name: Initialize fact variables
+      ansible.builtin.set_fact:
+        systemd_services_info: []
+        mounts_info: []
 
     - name: Get systemd services info 
       ansible.builtin.systemd:
@@ -32,10 +37,9 @@
         gather_subset:
           - mounts
     
-    - name: Set fact for systemd services and status
+    - name: Set fact for list of mounts
       ansible.builtin.set_fact:
-        mounts_info: "{{ mounts_info | default([]) + [ { 'Filesystem': item.device, 'Mount': item.mount, 'FSType': item.fstype, 'TotalSize': item.size_total, 'Availablesize': item.size_available } ] }}"
-      loop: "{{ ansible_mounts }}"
+        mounts_info: "{{ ansible_mounts | map(attribute='mount') | list}}"
 
     - name: Template out the system information 
       ansible.builtin.template:
@@ -51,7 +55,7 @@
     - name: Add info to OS_MIG_STATUS
       ansible.builtin.lineinfile: 
         path: "{{ OS_MIG_STATUS }}"
-        line: "PRE_MIG_SYS_INFO: Complete"
+        line: "GATHER_SYS_INFO: Complete"
         state: present
         create: true
 
@@ -60,10 +64,10 @@
     - name: Add info to OS_MIG_STATUS
       ansible.builtin.lineinfile: 
         path: "{{ OS_MIG_STATUS }}"
-        line: "PRE_MIG_SYS_INFO: Fail"
+        line: "GATHER_SYS_INFO: Fail"
         state: present
         create: true
 
     - name: Print message
       ansible.builtin.debug:
-        msg: "Error occured while gathring system information"
+        msg: "Error occured while gathering system information"

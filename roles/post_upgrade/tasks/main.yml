@@ -16,15 +16,28 @@
     - name: Include task file to harden cron permission
       ansible.builtin.include_tasks: cron_permissions_hardening.yml
 
+    - name: Install packages 
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: manage_packages.yml
+      vars:
+        v_action: "install"
+        v_list_of_packages: "{{ packages_to_install | list }}"
+      when: 
+        - packages_to_install is defined 
+        - packages_to_install | length > 0 
+
     - name: Enable and start systemd services
       ansible.builtin.include_role:
         name: common
         tasks_from: systemd_services.yml
       vars:
         v_action: "start"
-        v_list_of_services: 
-          - "autofs"
+        v_list_of_services: "{{ systemd_services_to_start }}"
         v_enable: true
+      when: 
+        - systemd_services_to_start is defined 
+        - systemd_services_to_start | length > 0
     
     - name: Gather system info 
       ansible.builtin.include_role:

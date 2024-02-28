@@ -35,7 +35,7 @@
       ansible.builtin.shell: >
         set -o pipefail;
         export PATH={{ os_path }};
-        leapp upgrade
+        leapp upgrade --target={{ target_version }} 
         {{ leapp_upgrade_opts }}
         {{ leapp_enable_repos_args }}
         2>&1 | tee -a {{ log_file }}

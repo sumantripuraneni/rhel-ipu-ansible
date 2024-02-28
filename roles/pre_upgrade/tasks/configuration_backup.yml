@@ -25,6 +25,7 @@
         src: "{{ item }}"
         dest: "{{ config_backup_dir }}"
         remote_src: true
+      ignore_errors: true  
       register: config_bkp 
       loop: "{{ config_paths_to_backup }}"
       
@@ -33,6 +34,7 @@
         src: "{{ item }}"
         dest: "{{ config_backup_dir }}"
         remote_src: true
+      ignore_errors: true
       register: config_bkp 
       loop: "{{ veritas_config_paths_to_backup }}"
       when: veritas_vcs_running

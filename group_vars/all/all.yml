@@ -39,6 +39,7 @@ unsupported_modules_to_remove:
   - floppy 
 
 target_version: 8.8 
+permit_root_login_change: true
 
 systemd_services_to_validate:
   - rsyslog.service
@@ -48,8 +49,16 @@ systemd_services_to_validate:
 systemd_services_to_stop:
   - rsyslog.service
 
-packges_to_remove:
+systemd_services_to_start:
+  - autofs
+  - rsyslog.service
+
+packages_to_remove:
   - tmux
+
+packages_to_install:
+  - tmux
+  - autofs
 
 rear_pkgs: rear, syslinux, genisoimage
 

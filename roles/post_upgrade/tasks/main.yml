@@ -46,6 +46,14 @@
       vars:
         v_analysis: 'post'
 
+    - name: Disable permit root login 
+      ansible.builtin.lineinfile:
+        dest: /etc/ssh/sshd_config
+        regexp: "^PermitRootLogin yes"
+        line: "#PermitRootLogin yes"
+        state: present
+      when: permit_root_login_change | bool == true
+    
     - name: Add info to OS_MIG_STATUS
       ansible.builtin.lineinfile: 
         path: "{{ OS_MIG_STATUS }}"
